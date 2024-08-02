@@ -1,7 +1,6 @@
-
 streamlit
 sentence-transformers
-PyPDF2
+pypdf
 langchain
 faiss-cpu
 google-generativeai
