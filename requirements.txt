@@ -4,3 +4,6 @@ pypdf
 langchain
 faiss-cpu
 google-generativeai
+groq
+python-dotenv
+IProgress
