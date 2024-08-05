@@ -103,7 +103,7 @@ def retrieve_relevant_chunks(query, index, all_chunks, top_k=5):
     query_vector = model.encode([query])[0]
     cached_response = retrieve_from_cache(query_vector)
     if cached_response:
-        st.info("Answer recovered from Cache.")
+        #st.info("Answer recovered from Cache.")
         return cached_response
     D, I = index.search(np.array([query_vector]).astype('float32'), top_k)
     relevant_chunks = [all_chunks[i] for i in I[0]]
@@ -158,15 +158,32 @@ def rag_query(query: str, index, all_chunks, chunk_to_doc, top_k: int = 5) -> tu
 
 # Streamlit app
 def main():
-    st.title("RAGify - Chat with Your Documents")
-    st.write("Ask questions about your company's documents and get AI-powered answers.")
+    #st.title("Blunder Mifflin")
+    st.subheader("Ask questions about Blunder Mifflin's Company Policy and get AI-powered answers.")
 
     # Process PDFs and create index
     all_chunks, chunk_to_doc = process_pdfs()
     index = create_faiss_index(all_chunks)
 
-    # User input
-    user_query = st.text_input("Enter your question:")
+    # Default questions
+    default_questions = [
+        "Select a pre-defined question from the drop-down or start typing your own question.",
+        "What is the company's vacation policy?",
+        "How does the performance review process work?",
+        "What are the guidelines for remote work?",
+        "What is the dress code policy?",
+        "How does the company handle overtime?"
+    ]
+
+    # User input with default questions
+    user_query = st.selectbox("", default_questions)
+
+    # If the default option is selected, clear the input
+    if user_query == default_questions[0]:
+        user_query = ""
+
+    # Allow users to edit the selected question or enter a new one
+    user_query = st.text_input("Edit or enter your question:", value=user_query)
 
     if st.button("Get Answer"):
         if user_query:
@@ -186,7 +203,7 @@ def main():
             with st.expander("Usage Information"):
                 st.json(usage_info)
         else:
-            st.warning("Please enter a question.")
+            st.warning("Please enter a question or select a pre-defined one.")
 
 if __name__ == "__main__":
     main()
