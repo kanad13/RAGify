@@ -3,7 +3,6 @@ sentence-transformers
 pypdf
 langchain
 faiss-cpu
-google-generativeai
 groq
 python-dotenv
 IProgress
