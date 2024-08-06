@@ -10,6 +10,9 @@ import json
 import logging
 from dotenv import load_dotenv
 import streamlit as st
+import hashlib
+import time
+from groq import RateLimitError
 
 # Load environment variables
 load_dotenv()
@@ -46,10 +49,25 @@ def create_chunks(text, chunk_size=1000, chunk_overlap=200):
     chunks = text_splitter.split_text(text)
     return chunks
 
+def get_files_hash(directory):
+    hash_md5 = hashlib.md5()
+    for filename in sorted(os.listdir(directory)):
+        if filename.endswith('.pdf'):
+            with open(os.path.join(directory, filename), "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
 # Process all PDF files in the specified directory and create chunks from their text
 @st.cache_data
-def process_pdfs():
+def process_pdfs(_hash=None):
     pdf_directory = './input_files/'
+    current_hash = get_files_hash(pdf_directory)
+
+    if _hash is not None and _hash != current_hash:
+        # If the hash has changed, clear the cache
+        st.cache_data.clear()
+
     all_chunks = []
     chunk_to_doc = {}
     for filename in os.listdir(pdf_directory):
@@ -65,7 +83,7 @@ def process_pdfs():
     logging.info(f"Total chunks: {len(all_chunks)}")
     logging.info(f"Sample chunk: {all_chunks[0][:100]}...")  # Print first 100 characters of the first chunk
 
-    return all_chunks, chunk_to_doc
+    return all_chunks, chunk_to_doc, current_hash
 
 # Generate embeddings and create FAISS index
 @st.cache_resource
@@ -147,7 +165,7 @@ def retrieve_relevant_chunks(query, index, all_chunks, top_k=10):
     return relevant_chunks
 
 # Function to generate a response using the Groq API based on relevant chunks
-def generate_response(query: str, relevant_chunks: List[str], model: str = "llama-3.1-8b-instant"):
+def generate_response(query: str, relevant_chunks: List[str], primary_model: str = "llama-3.1-8b-instant", fallback_model: str = "gemma2-9b-it", max_retries: int = 3):
     context = "\n".join(relevant_chunks)
     prompt = f"""Based on the following context, please answer the question. If the answer is not fully contained in the context, provide the most relevant information available and indicate any uncertainty.
 
@@ -158,39 +176,59 @@ Question: {query}
 
 Answer:"""
 
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {
-                "role": "system",
-                "content": "You are a helpful assistant that answers questions based on the given context."
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        model=model,
-        temperature=0.7,
-        max_tokens=1024,
-        top_p=1,
-        stream=False,
-        stop=None
-    )
+    models = [primary_model, fallback_model]
+    for model in models:
+        for attempt in range(max_retries):
+            try:
+                chat_completion = client.chat.completions.create(
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are a helpful assistant that answers questions based on the given context."
+                        },
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    model=model,
+                    temperature=0.7,
+                    max_tokens=1024,
+                    top_p=1,
+                    stream=False,
+                    stop=None
+                )
 
-    response = chat_completion.choices[0].message.content.strip()
-    usage_info = {
-        "prompt_tokens": chat_completion.usage.prompt_tokens,
-        "completion_tokens": chat_completion.usage.completion_tokens,
-        "total_tokens": chat_completion.usage.total_tokens
-    }
-    logging.info(f"Usage Info: {usage_info}")
-    return response, usage_info, relevant_chunks
+                response = chat_completion.choices[0].message.content.strip()
+                usage_info = {
+                    "prompt_tokens": chat_completion.usage.prompt_tokens,
+                    "completion_tokens": chat_completion.usage.completion_tokens,
+                    "total_tokens": chat_completion.usage.total_tokens,
+                    "model_used": model
+                }
+                logging.info(f"Usage Info: {usage_info}")
+                return response, usage_info, relevant_chunks
+
+            except RateLimitError as e:
+                if model == fallback_model and attempt == max_retries - 1:
+                    logging.error(f"Rate limit exceeded for both models after {max_retries} attempts.")
+                    raise e
+                logging.warning(f"Rate limit exceeded for model {model}. Retrying in 5 seconds...")
+                time.sleep(5)
+            except Exception as e:
+                logging.error(f"Error occurred with model {model}: {str(e)}")
+                break  # Move to the next model if any other error occurs
+
+    raise Exception("Failed to generate response with all available models.")
 
 # Function to process a query using retrieval-augmented generation (RAG)
 def rag_query(query: str, index, all_chunks, chunk_to_doc, top_k: int = 10) -> tuple:
     relevant_chunks = retrieve_relevant_chunks(query, index, all_chunks, top_k)
     response, usage_info, used_chunks = generate_response(query, relevant_chunks)
-    source_docs = list(set([chunk_to_doc[chunk] for chunk in used_chunks]))
+
+    # Use a list comprehension with a conditional to filter out chunks not in chunk_to_doc
+    source_docs = list(set([chunk_to_doc.get(chunk, "Unknown Source") for chunk in used_chunks]))
+
     return response, usage_info, source_docs
 
 # Streamlit app
@@ -200,7 +238,7 @@ def main():
     st.write("Ask questions about Blunder Mifflin's Company Policy.")
 
     # Process PDFs and create index
-    all_chunks, chunk_to_doc = process_pdfs()
+    all_chunks, chunk_to_doc, current_hash = process_pdfs()
     index = create_faiss_index(all_chunks)
 
     # Default questions
@@ -208,11 +246,7 @@ def main():
         "Select a question",
         "What is Blunder Mifflin's product range?",
         "Who is part of Blunder Mifflin's team?",
-        #"Describe Blunder Mifflin's remote work policy?",
-        #"How can one raise grievances at Blunder Mifflin?",
-        #"What is Blunder Mifflin's policy on smoking at office?",
         "What is Blunder Mifflin's policy relationships and nepotism?",
-        #"What is Blunder Mifflin's policy prank protocol?",
         "Describe Blunder Mifflin's Birthday Party Committee Rules",
         "Other (Type your own question)"
     ]
@@ -230,12 +264,14 @@ def main():
 
     # Display the user_query if it's not empty
     if user_query:
-        #st.write("Your question:", user_query)
         pass
 
     if st.button("Get Answer"):
         if user_query and user_query != "Select a question":
             with st.spinner("Generating answer..."):
+                # Pass the current_hash to process_pdfs to check for changes
+                all_chunks, chunk_to_doc, _ = process_pdfs(current_hash)
+                index = create_faiss_index(all_chunks)
                 response, usage_info, source_docs = rag_query(user_query, index, all_chunks, chunk_to_doc)
 
             # Display the response
@@ -252,7 +288,8 @@ def main():
                 st.json({
                     "Prompt Tokens": usage_info["prompt_tokens"],
                     "Completion Tokens": usage_info["completion_tokens"],
-                    "Total Tokens": usage_info["total_tokens"]
+                    "Total Tokens": usage_info["total_tokens"],
+                    "Model Used": usage_info["model_used"]
                 })
         else:
             st.warning("Please select a question or enter your own.")
