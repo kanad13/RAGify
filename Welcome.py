@@ -6,7 +6,7 @@ st.set_page_config(page_title="RAGify", page_icon=":soccer:", layout="wide", ini
 st.write("""
 #### RAGify - Bringing Your Documentation to Life with Generative AI
 
-This webapp is for RAGify - a tool that shows you how to transform your internal documents into an interactive Q&A system. It uses two key technologies:
+This webapp is for RAGify - a tool that shows you how to transform your internal company documents into an interactive Q&A system. It uses two key technologies:
 
 1. Retrieval-Augmented Generation (RAG)
 2. Large Language Models (LLMs)
@@ -27,9 +27,9 @@ RAGify offers a simple, secure way to bring your static documents to life using 
 
 #### Navigation
 
-Click on the sidebar to interact with RAGify App.
-If you would like to look at the code of the app, then [jump to Github](https://github.com/kanad13/RAGify).
-If you would like to know more about me, Kunal Pathak, the creator of this app, then [checkout my website](https://www.kunal-pathak.com).
+Click on the sidebar to interact with RAGify App. \n
+If you would like to look at the code of the app, then [jump to Github](https://github.com/kanad13/RAGify). \n
+If you would like to know more about me, **Kunal Pathak**, the creator of this app, then [checkout my website](https://www.kunal-pathak.com).
 				 """)
 
 #st.image('late/projects/UEFA-Euro-Data-Analysis/assets/soccer_player.jpeg', caption=None, width=400, use_column_width=None, clamp=False, channels="RGB", output_format="auto")
