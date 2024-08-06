@@ -7,10 +7,15 @@ import numpy as np
 from pypdf import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import json
+import logging
 from dotenv import load_dotenv
 import streamlit as st
 
+# Load environment variables
 load_dotenv()
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
 
 # Initialize the Groq client with the API key obtained from environment variables
 client = groq.Groq(
@@ -18,7 +23,8 @@ client = groq.Groq(
 )
 
 # Load a pre-trained sentence transformer model for generating embeddings
-model = SentenceTransformer('all-MiniLM-L6-v2')
+model_name = 'all-mpnet-base-v2'
+model = SentenceTransformer(model_name)
 
 # Function to extract text content from a PDF file
 def extract_text_from_pdf(pdf_path):
@@ -30,7 +36,7 @@ def extract_text_from_pdf(pdf_path):
     return text
 
 # Function to split the extracted text into smaller chunks for processing
-def create_chunks(text, chunk_size=500, chunk_overlap=50):
+def create_chunks(text, chunk_size=1000, chunk_overlap=200):
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
@@ -53,6 +59,11 @@ def process_pdfs():
             all_chunks.extend(chunks)
             for chunk in chunks:
                 chunk_to_doc[chunk] = filename
+
+    # Log information about chunks
+    logging.info(f"Total chunks: {len(all_chunks)}")
+    logging.info(f"Sample chunk: {all_chunks[0][:100]}...")  # Print first 100 characters of the first chunk
+
     return all_chunks, chunk_to_doc
 
 # Generate embeddings and create FAISS index
@@ -60,7 +71,19 @@ def process_pdfs():
 def create_faiss_index(all_chunks):
     embeddings = model.encode(all_chunks)
     dimension = embeddings.shape[1]
-    index = faiss.IndexFlatL2(dimension)
+    num_chunks = len(all_chunks)
+
+    # Dynamically decide on the index type based on the number of chunks
+    if num_chunks < 100:
+        logging.info("Using FlatL2 index due to small number of chunks")
+        index = faiss.IndexFlatL2(dimension)
+    else:
+        logging.info("Using IVFFlat index")
+        n_clusters = min(int(np.sqrt(num_chunks)), 100)  # Adjust number of clusters based on data size
+        quantizer = faiss.IndexFlatL2(dimension)
+        index = faiss.IndexIVFFlat(quantizer, dimension, n_clusters)
+        index.train(embeddings.astype('float32'))
+
     index.add(embeddings.astype('float32'))
     return index
 
@@ -71,9 +94,13 @@ cache_file = 'semantic_cache.json'
 def load_cache():
     try:
         with open(cache_file, 'r') as f:
-            return json.load(f)
+            cache = json.load(f)
+            if cache.get('model_name') != model_name:
+                logging.info("Embedding model changed. Resetting cache.")
+                return {"queries": [], "embeddings": [], "responses": [], "model_name": model_name}
+            return cache
     except FileNotFoundError:
-        return {"queries": [], "embeddings": [], "responses": []}
+        return {"queries": [], "embeddings": [], "responses": [], "model_name": model_name}
 
 # Function to save the cache to a JSON file
 def save_cache(cache):
@@ -84,8 +111,11 @@ def save_cache(cache):
 cache = load_cache()
 
 # Function to retrieve a response from the cache based on query similarity
-def retrieve_from_cache(query_embedding, threshold=0.35):
+def retrieve_from_cache(query_embedding, threshold=0.5):
     for i, cached_embedding in enumerate(cache['embeddings']):
+        if len(cached_embedding) != len(query_embedding):
+            logging.warning("Cached embedding dimension mismatch. Skipping cache entry.")
+            continue
         distance = np.linalg.norm(query_embedding - np.array(cached_embedding))
         if distance < threshold:
             return cache['responses'][i]
@@ -96,24 +126,29 @@ def update_cache(query, query_embedding, response):
     cache['queries'].append(query)
     cache['embeddings'].append(query_embedding.tolist())
     cache['responses'].append(response)
+    cache['model_name'] = model_name
     save_cache(cache)
 
 # Function to retrieve the most relevant chunks of text based on a query
-def retrieve_relevant_chunks(query, index, all_chunks, top_k=5):
+def retrieve_relevant_chunks(query, index, all_chunks, top_k=10):
     query_vector = model.encode([query])[0]
+
     cached_response = retrieve_from_cache(query_vector)
     if cached_response:
-        #st.info("Answer recovered from Cache.")
+        logging.info("Answer recovered from Cache.")
         return cached_response
+
+    top_k = min(top_k, len(all_chunks))  # Ensure we don't request more chunks than available
     D, I = index.search(np.array([query_vector]).astype('float32'), top_k)
     relevant_chunks = [all_chunks[i] for i in I[0]]
+
     update_cache(query, query_vector, relevant_chunks)
     return relevant_chunks
 
 # Function to generate a response using the Groq API based on relevant chunks
-def generate_response(query: str, relevant_chunks: List[str], model: str = "llama-3.1-8b-instant") -> str:
+def generate_response(query: str, relevant_chunks: List[str], model: str = "llama-3.1-8b-instant"):
     context = "\n".join(relevant_chunks)
-    prompt = f"""Based on the following context, please answer the question. If the answer is not in the context, say "I don't have enough information to answer that question."
+    prompt = f"""Based on the following context, please answer the question. If the answer is not fully contained in the context, provide the most relevant information available and indicate any uncertainty.
 
 Context:
 {context}
@@ -134,7 +169,7 @@ Answer:"""
             }
         ],
         model=model,
-        temperature=0.5,
+        temperature=0.7,
         max_tokens=1024,
         top_p=1,
         stream=False,
@@ -142,23 +177,18 @@ Answer:"""
     )
 
     response = chat_completion.choices[0].message.content.strip()
-    usage_info = {
-        "prompt_tokens": chat_completion.usage.prompt_tokens,
-        "completion_tokens": chat_completion.usage.completion_tokens,
-        "total_tokens": chat_completion.usage.total_tokens
-    }
+    usage_info = chat_completion.usage
+    logging.info(f"Usage Info: {usage_info}")
     return response, usage_info, relevant_chunks
 
 # Function to process a query using retrieval-augmented generation (RAG)
-def rag_query(query: str, index, all_chunks, chunk_to_doc, top_k: int = 5) -> tuple:
+def rag_query(query: str, index, all_chunks, chunk_to_doc, top_k: int = 10) -> tuple:
     relevant_chunks = retrieve_relevant_chunks(query, index, all_chunks, top_k)
     response, usage_info, used_chunks = generate_response(query, relevant_chunks)
     source_docs = list(set([chunk_to_doc[chunk] for chunk in used_chunks]))
     return response, usage_info, source_docs
 
 # Streamlit app
-
-# https://docs.streamlit.io/develop/api-reference/configuration/st.set_page_config
 st.set_page_config(page_title="Blunder Mifflin", page_icon=":soccer:", layout="wide", initial_sidebar_state="expanded", menu_items=None)
 
 def main():
