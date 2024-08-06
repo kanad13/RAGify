@@ -14,24 +14,31 @@ import hashlib
 import time
 from groq import RateLimitError
 
-# Load environment variables
+# Load environment variables to keep sensitive information out of the codebase
+# This is crucial for security and allows for easy configuration changes across environments
 load_dotenv()
 
-# Set up logging
+# Set up logging to track execution and debug issues
+# Proper logging is essential for monitoring and troubleshooting in production environments
 logging.basicConfig(level=logging.INFO)
 
-# Initialize the Groq client with the API key obtained from environment variables
+# Initialize the Groq client for API access
+# We're using an API key stored in environment variables for security
+# The commented out line shows an alternative using Streamlit secrets, which is useful for deployment scenarios
 client = groq.Groq(
     api_key=os.environ.get("GROQ_API_KEY"),
     #api_key=st.secrets["GROQ_API_KEY"],
 )
 
-# Load a pre-trained sentence transformer model for generating embeddings
+# Load a pre-trained sentence transformer model for generating text embeddings
+# We chose 'all-mpnet-base-v2' for its balance of performance and accuracy
+# This model is crucial for converting text to vector representations for similarity search
 model_name = 'all-mpnet-base-v2'
 model = SentenceTransformer(model_name)
 
-# Function to extract text content from a PDF file
 def extract_text_from_pdf(pdf_path):
+    # We extract text from PDFs to make the content searchable
+    # This allows us to work with various document formats in a unified way
     with open(pdf_path, 'rb') as file:
         reader = PdfReader(file)
         text = ''
@@ -39,8 +46,11 @@ def extract_text_from_pdf(pdf_path):
             text += page.extract_text() + '\n'
     return text
 
-# Function to split the extracted text into smaller chunks for processing
 def create_chunks(text, chunk_size=1000, chunk_overlap=200):
+    # Chunking is crucial for two reasons:
+    # 1. It allows us to process long documents that might exceed model token limits
+    # 2. It creates more granular pieces of text, improving retrieval accuracy
+    # We use overlap to maintain context between chunks
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
@@ -50,6 +60,8 @@ def create_chunks(text, chunk_size=1000, chunk_overlap=200):
     return chunks
 
 def get_files_hash(directory):
+    # We hash the input files to detect changes
+    # This is crucial for maintaining an up-to-date knowledge base without unnecessary reprocessing
     hash_md5 = hashlib.md5()
     for filename in sorted(os.listdir(directory)):
         if filename.endswith('.pdf'):
@@ -58,14 +70,16 @@ def get_files_hash(directory):
                     hash_md5.update(chunk)
     return hash_md5.hexdigest()
 
-# Process all PDF files in the specified directory and create chunks from their text
 @st.cache_data
 def process_pdfs(_hash=None):
+    # We use caching to avoid reprocessing PDFs on every run
+    # This significantly improves performance for repeated queries
     pdf_directory = './input_files/'
     current_hash = get_files_hash(pdf_directory)
 
+    # We clear the cache if input files have changed
+    # This ensures we're always working with the most up-to-date information
     if _hash is not None and _hash != current_hash:
-        # If the hash has changed, clear the cache
         st.cache_data.clear()
 
     all_chunks = []
@@ -79,26 +93,28 @@ def process_pdfs(_hash=None):
             for chunk in chunks:
                 chunk_to_doc[chunk] = filename
 
-    # Log information about chunks
+    # Logging helps with debugging and monitoring the chunking process
     logging.info(f"Total chunks: {len(all_chunks)}")
-    logging.info(f"Sample chunk: {all_chunks[0][:100]}...")  # Print first 100 characters of the first chunk
+    logging.info(f"Sample chunk: {all_chunks[0][:100]}...")
 
     return all_chunks, chunk_to_doc, current_hash
 
-# Generate embeddings and create FAISS index
 @st.cache_resource
 def create_faiss_index(all_chunks):
+    # We use FAISS for efficient similarity search
+    # This is crucial for quickly finding relevant chunks when answering queries
     embeddings = model.encode(all_chunks)
     dimension = embeddings.shape[1]
     num_chunks = len(all_chunks)
 
-    # Dynamically decide on the index type based on the number of chunks
+    # We dynamically choose the index type based on the dataset size
+    # This optimizes search performance: FlatL2 for small datasets, IVFFlat for larger ones
     if num_chunks < 100:
         logging.info("Using FlatL2 index due to small number of chunks")
         index = faiss.IndexFlatL2(dimension)
     else:
         logging.info("Using IVFFlat index")
-        n_clusters = min(int(np.sqrt(num_chunks)), 100)  # Adjust number of clusters based on data size
+        n_clusters = min(int(np.sqrt(num_chunks)), 100)  # Balancing clustering and search efficiency
         quantizer = faiss.IndexFlatL2(dimension)
         index = faiss.IndexIVFFlat(quantizer, dimension, n_clusters)
         index.train(embeddings.astype('float32'))
@@ -106,14 +122,17 @@ def create_faiss_index(all_chunks):
     index.add(embeddings.astype('float32'))
     return index
 
-# Initialize cache
+# Initialize cache for storing query results
+# Caching improves response times for repeated or similar queries
 cache_file = 'semantic_cache.json'
 
-# Function to load the cache from a JSON file
 def load_cache():
+    # We load the cache from a file to persist it across sessions
+    # This improves the system's efficiency over time
     try:
         with open(cache_file, 'r') as f:
             cache = json.load(f)
+            # We reset the cache if the embedding model changes to ensure consistency
             if cache.get('model_name') != model_name:
                 logging.info("Embedding model changed. Resetting cache.")
                 return {"queries": [], "embeddings": [], "responses": [], "model_name": model_name}
@@ -121,16 +140,16 @@ def load_cache():
     except FileNotFoundError:
         return {"queries": [], "embeddings": [], "responses": [], "model_name": model_name}
 
-# Function to save the cache to a JSON file
 def save_cache(cache):
+    # Regularly saving the cache ensures we don't lose valuable precomputed results
     with open(cache_file, 'w') as f:
         json.dump(cache, f)
 
-# Load the cache
 cache = load_cache()
 
-# Function to retrieve a response from the cache based on query similarity
 def retrieve_from_cache(query_embedding, threshold=0.5):
+    # Semantic caching allows us to reuse results for similar queries
+    # This significantly reduces API calls and improves response times
     for i, cached_embedding in enumerate(cache['embeddings']):
         if len(cached_embedding) != len(query_embedding):
             logging.warning("Cached embedding dimension mismatch. Skipping cache entry.")
@@ -140,16 +159,17 @@ def retrieve_from_cache(query_embedding, threshold=0.5):
             return cache['responses'][i]
     return None
 
-# Function to update the cache with a new query, embedding, and response
 def update_cache(query, query_embedding, response):
+    # We update the cache with new queries to continually improve performance
     cache['queries'].append(query)
     cache['embeddings'].append(query_embedding.tolist())
     cache['responses'].append(response)
     cache['model_name'] = model_name
     save_cache(cache)
 
-# Function to retrieve the most relevant chunks of text based on a query
 def retrieve_relevant_chunks(query, index, all_chunks, top_k=10):
+    # We use vector similarity to find the most relevant chunks
+    # This is more effective than keyword matching for understanding context and semantics
     query_vector = model.encode([query])[0]
 
     cached_response = retrieve_from_cache(query_vector)
@@ -157,15 +177,17 @@ def retrieve_relevant_chunks(query, index, all_chunks, top_k=10):
         logging.info("Answer recovered from Cache.")
         return cached_response
 
-    top_k = min(top_k, len(all_chunks))  # Ensure we don't request more chunks than available
+    # We limit top_k to avoid retrieving more chunks than available
+    top_k = min(top_k, len(all_chunks))
     D, I = index.search(np.array([query_vector]).astype('float32'), top_k)
     relevant_chunks = [all_chunks[i] for i in I[0]]
 
     update_cache(query, query_vector, relevant_chunks)
     return relevant_chunks
 
-# Function to generate a response using the Groq API based on relevant chunks
 def generate_response(query: str, relevant_chunks: List[str], primary_model: str = "llama-3.1-8b-instant", fallback_model: str = "gemma2-9b-it", max_retries: int = 3):
+    # We use a language model to generate responses based on retrieved chunks
+    # This allows for more natural and contextually appropriate answers
     context = "\n".join(relevant_chunks)
     prompt = f"""Based on the following context, please answer the question. If the answer is not fully contained in the context, provide the most relevant information available and indicate any uncertainty.
 
@@ -176,6 +198,8 @@ Question: {query}
 
 Answer:"""
 
+    # We implement a fallback mechanism and retry logic for robustness
+    # This ensures the system can handle API errors and rate limits gracefully
     models = [primary_model, fallback_model]
     for model in models:
         for attempt in range(max_retries):
@@ -221,27 +245,29 @@ Answer:"""
 
     raise Exception("Failed to generate response with all available models.")
 
-# Function to process a query using retrieval-augmented generation (RAG)
 def rag_query(query: str, index, all_chunks, chunk_to_doc, top_k: int = 10) -> tuple:
+    # This function combines retrieval and generation for a complete RAG pipeline
+    # RAG allows us to ground the model's responses in specific, relevant information
     relevant_chunks = retrieve_relevant_chunks(query, index, all_chunks, top_k)
     response, usage_info, used_chunks = generate_response(query, relevant_chunks)
 
-    # Use a list comprehension with a conditional to filter out chunks not in chunk_to_doc
+    # We track source documents for transparency and citation
     source_docs = list(set([chunk_to_doc.get(chunk, "Unknown Source") for chunk in used_chunks]))
 
     return response, usage_info, source_docs
 
-# Streamlit app
+# Streamlit app configuration
+# We use Streamlit for rapid prototyping and easy deployment of the user interface
 st.set_page_config(page_title="Blunder Mifflin", page_icon=":soccer:", layout="wide", initial_sidebar_state="expanded", menu_items=None)
 
 def main():
     st.write("Ask questions about Blunder Mifflin's Company Policy.")
 
-    # Process PDFs and create index
+    # We process PDFs and create the index at the start to ensure up-to-date information
     all_chunks, chunk_to_doc, current_hash = process_pdfs()
     index = create_faiss_index(all_chunks)
 
-    # Default questions
+    # We provide default questions to guide users and demonstrate system capabilities
     default_questions = [
         "Select a question",
         "What is Blunder Mifflin's product range?",
@@ -251,10 +277,9 @@ def main():
         "Other (Type your own question)"
     ]
 
-    # User input with default questions using dropdown
+    # We use a dropdown for ease of use, but also allow custom questions for flexibility
     selected_question = st.selectbox("Choose a question or select 'Other' to type your own:", default_questions)
 
-    # Text input for custom questions or editing selected questions
     if selected_question == "Other (Type your own question)":
         user_query = st.text_input("Enter your question:")
     elif selected_question != "Select a question":
@@ -262,28 +287,26 @@ def main():
     else:
         user_query = ""
 
-    # Display the user_query if it's not empty
     if user_query:
         pass
 
+    # We use a button to trigger the query process, giving users control over when to send a request
     if st.button("Get Answer"):
         if user_query and user_query != "Select a question":
             with st.spinner("Generating answer..."):
-                # Pass the current_hash to process_pdfs to check for changes
+                # We recheck for changes in PDFs to ensure we're using the latest data
                 all_chunks, chunk_to_doc, _ = process_pdfs(current_hash)
                 index = create_faiss_index(all_chunks)
                 response, usage_info, source_docs = rag_query(user_query, index, all_chunks, chunk_to_doc)
 
-            # Display the response
+            # We display the response, sources, and usage info for transparency
             st.subheader("Answer:")
             st.write(response)
 
-            # Display the source documents
             st.subheader("Source Documents:")
             for doc in source_docs:
                 st.write(f"- {doc}")
 
-            # Display usage information
             with st.expander("Usage Information"):
                 st.json({
                     "Prompt Tokens": usage_info["prompt_tokens"],
