@@ -177,7 +177,11 @@ Answer:"""
     )
 
     response = chat_completion.choices[0].message.content.strip()
-    usage_info = chat_completion.usage
+    usage_info = {
+        "prompt_tokens": chat_completion.usage.prompt_tokens,
+        "completion_tokens": chat_completion.usage.completion_tokens,
+        "total_tokens": chat_completion.usage.total_tokens
+    }
     logging.info(f"Usage Info: {usage_info}")
     return response, usage_info, relevant_chunks
 
@@ -237,7 +241,11 @@ def main():
 
             # Display usage information
             with st.expander("Usage Information"):
-                st.json(usage_info)
+                st.json({
+                    "Prompt Tokens": usage_info["prompt_tokens"],
+                    "Completion Tokens": usage_info["completion_tokens"],
+                    "Total Tokens": usage_info["total_tokens"]
+                })
         else:
             st.warning("Please select a question or enter your own.")
 
