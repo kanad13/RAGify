@@ -15,5 +15,5 @@ RAGify is powered by a combination of open and closed-source technologies. I am 
 - [Langchain's RecursiveCharacterTextSplitter](https://python.langchain.com/v0.1/docs/modules/data_connection/document_transformers/recursive_text_splitter/) - This tool is used for breaking down large text into manageable chunks, optimizing them for embedding and retrieval.
 - [Streamlit](https://streamlit.io/) - Streamlit provides the platform for hosting RAGify - a user-friendly web interface.
 - [Python](https://github.com/python) - The backbone of RAGify's codebase.
-- The Broader AI/ML Community - A special thanks to the AI/ML community whose ongoing research and open-source contributions have laid the foundation for this project.
+- **The Broader AI/ML Community** - A special thanks to the AI/ML community whose ongoing research and open-source contributions have laid the foundation for this project.
 				 """)
