@@ -157,8 +157,11 @@ def rag_query(query: str, index, all_chunks, chunk_to_doc, top_k: int = 5) -> tu
     return response, usage_info, source_docs
 
 # Streamlit app
+
+# https://docs.streamlit.io/develop/api-reference/configuration/st.set_page_config
+st.set_page_config(page_title="Blunder Mifflin", page_icon=":soccer:", layout="wide", initial_sidebar_state="expanded", menu_items=None)
+
 def main():
-    #st.title("Blunder Mifflin")
     st.subheader("Ask questions about Blunder Mifflin's Company Policy and get AI-powered answers.")
 
     # Process PDFs and create index
@@ -167,26 +170,29 @@ def main():
 
     # Default questions
     default_questions = [
-        "Select a pre-defined question from the drop-down or start typing your own question.",
-        "What is the company's vacation policy?",
-        "How does the performance review process work?",
-        "What are the guidelines for remote work?",
-        "What is the dress code policy?",
-        "How does the company handle overtime?"
+        "Select a question",
+        "What is Blunder Mifflin's product range?",
+        "Who is part of Blunder Mifflin's team?",
+        "Describe Blunder Mifflin's remote work policy?",
+        "How can one raise grievances in Blunder Mifflin?",
+        "What is Blunder Mifflin's policy on smoking at office?",
+        "What is Blunder Mifflin's policy relationships and nepotism?",
+        "What is Blunder Mifflin's policy prank protocol?",
+        "Describe Blunder Mifflin's Birthday Party Committee Rules",
+        "Other (Type your own question)"
     ]
 
-    # User input with default questions
-    user_query = st.selectbox("", default_questions)
+    # User input with default questions using dropdown
+    selected_question = st.selectbox("Choose a question or select 'Other' to type your own:", default_questions)
 
-    # If the default option is selected, clear the input
-    if user_query == default_questions[0]:
-        user_query = ""
-
-    # Allow users to edit the selected question or enter a new one
-    user_query = st.text_input("Edit or enter your question:", value=user_query)
+    # Text input for custom questions or editing selected questions
+    if selected_question in ["Select a question", "Other (Type your own question)"]:
+        user_query = st.text_input("Enter your question:")
+    else:
+        user_query = st.text_input("Edit the selected question or enter a new one:", value=selected_question)
 
     if st.button("Get Answer"):
-        if user_query:
+        if user_query and user_query != "Select a question":
             with st.spinner("Generating answer..."):
                 response, usage_info, source_docs = rag_query(user_query, index, all_chunks, chunk_to_doc)
 
@@ -203,7 +209,7 @@ def main():
             with st.expander("Usage Information"):
                 st.json(usage_info)
         else:
-            st.warning("Please enter a question or select a pre-defined one.")
+            st.warning("Please select a question or enter your own.")
 
 if __name__ == "__main__":
     main()
