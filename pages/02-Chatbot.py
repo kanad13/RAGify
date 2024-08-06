@@ -20,6 +20,7 @@ logging.basicConfig(level=logging.INFO)
 # Initialize the Groq client with the API key obtained from environment variables
 client = groq.Groq(
     api_key=os.environ.get("GROQ_API_KEY"),
+    #api_key=st.secrets["GROQ_API_KEY"],
 )
 
 # Load a pre-trained sentence transformer model for generating embeddings
