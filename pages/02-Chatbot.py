@@ -197,7 +197,7 @@ def rag_query(query: str, index, all_chunks, chunk_to_doc, top_k: int = 10) -> t
 st.set_page_config(page_title="Blunder Mifflin", page_icon=":soccer:", layout="wide", initial_sidebar_state="expanded", menu_items=None)
 
 def main():
-    st.subheader("Ask questions about Blunder Mifflin's Company Policy and get AI-powered answers.")
+    st.write("Ask questions about Blunder Mifflin's Company Policy.")
 
     # Process PDFs and create index
     all_chunks, chunk_to_doc = process_pdfs()
@@ -208,11 +208,11 @@ def main():
         "Select a question",
         "What is Blunder Mifflin's product range?",
         "Who is part of Blunder Mifflin's team?",
-        "Describe Blunder Mifflin's remote work policy?",
-        "How can one raise grievances in Blunder Mifflin?",
-        "What is Blunder Mifflin's policy on smoking at office?",
+        #"Describe Blunder Mifflin's remote work policy?",
+        #"How can one raise grievances at Blunder Mifflin?",
+        #"What is Blunder Mifflin's policy on smoking at office?",
         "What is Blunder Mifflin's policy relationships and nepotism?",
-        "What is Blunder Mifflin's policy prank protocol?",
+        #"What is Blunder Mifflin's policy prank protocol?",
         "Describe Blunder Mifflin's Birthday Party Committee Rules",
         "Other (Type your own question)"
     ]
@@ -221,10 +221,17 @@ def main():
     selected_question = st.selectbox("Choose a question or select 'Other' to type your own:", default_questions)
 
     # Text input for custom questions or editing selected questions
-    if selected_question in ["Select a question", "Other (Type your own question)"]:
+    if selected_question == "Other (Type your own question)":
         user_query = st.text_input("Enter your question:")
+    elif selected_question != "Select a question":
+        user_query = selected_question
     else:
-        user_query = st.text_input("Edit the selected question or enter a new one:", value=selected_question)
+        user_query = ""
+
+    # Display the user_query if it's not empty
+    if user_query:
+        #st.write("Your question:", user_query)
+        pass
 
     if st.button("Get Answer"):
         if user_query and user_query != "Select a question":
