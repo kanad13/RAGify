@@ -366,31 +366,69 @@ streamlit run Welcome.py
 This section will look at the technical implementation details of the RAGify project.
 If you are eager to browse through the code yourself, jump right [here](./RAGify-full_code.ipynb).
 
-### Visualize Full RAG System
+### Visualize Full RAGify Architecture
 
 Before diving into the details of building RAGify, here is a high-level overview of the system:
 
 ```mermaid
-graph TD
-    A[User Input] --> B[Streamlit Frontend]
-    B --> C[Query Processing]
-    C --> D[Text Chunking]
-    D --> E[Embedding Creation]
-    E --> F[Vector Database Lookup]
-    F --> G[Retrieve Relevant Chunks]
-    G --> H[Context Assembly]
-    H --> I[Meta LLM]
-    I --> J[Response Generation]
-    J --> K[Display Response]
-    L[PDF Documents] --> M[PDF Processing]
-    M --> D
-    N[FAISS Index] <--> F
-    O[SentenceTransformer Model] --> E
-    P[Token Management] --> H
-    Q[Error Handling] --> J
-    R[Cache] --> C
-    R --> F
-    F --> R
+flowchart TD
+    A[Start] --> B[Load Environment Variables]
+    B --> C[Initialize Groq Client]
+    C --> D[Load PDFs]
+    D --> E[Extract Text]
+    E --> F[Create Chunks]
+    F --> G[Generate Embeddings]
+    G --> H{Dataset Size}
+    H -- Small --> I[Create FlatL2 Index]
+    H -- Large --> J[Create IVFFlat Index]
+    I --> K[FAISS Index]
+    J --> K
+    L[User Query] --> M[Encode Query]
+    M --> N{Check Cache}
+    N -- Hit --> O[Return Cached Response]
+    N -- Miss --> P[Search Index]
+    K --> P
+    P --> Q[Retrieve Relevant Chunks]
+    Q --> R[Generate LLM Response]
+    R --> S{API Error?}
+    S -- Yes --> T[Retry or Use Fallback Model]
+    T --> R
+    S -- No --> U[Update Cache]
+    U --> V[Display Results]
+    O --> V
+
+    subgraph "Initialization"
+        B
+        C
+    end
+
+    subgraph "Data Processing and Indexing"
+        D
+        E
+        F
+        G
+        H
+        I
+        J
+        K
+    end
+
+    subgraph "Query Processing and Response Generation"
+        L
+        M
+        N
+        O
+        P
+        Q
+        R
+        S
+        T
+        U
+    end
+
+    subgraph "User Interface"
+        V
+    end
 ```
 
 This diagram might look complex, but the RAG concept is simple. It involves processing documents, creating embeddings, storing them in a vector database, and then using AI to generate responses based on user queries.
