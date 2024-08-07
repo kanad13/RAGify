@@ -585,3 +585,5 @@ flycheck_*.el
 /network-security.data
 rag_venv/
 .env
+semantic_cache.json
+blunder_mifflin_index.faiss

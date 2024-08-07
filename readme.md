@@ -765,7 +765,7 @@ This function performs the following steps:
 
 The `top_k` parameter allows me to control how many relevant chunks I retrieve, balancing between comprehensive context and computational efficiency.
 
-### Visualize RAG system (with Caching)
+### Visualize Caching aspect of RAGify
 
 This section is kind of a summary of the topics handled till now.
 First look at the diagram below
@@ -934,7 +934,7 @@ def main():
             st.warning("Please enter a question.")
 ```
 
-### Visualize RAG system (with Streamlit)
+### Visualize user engagement of RAGify
 
 This diagram demonstrates how the end-user flow looks like.
 
