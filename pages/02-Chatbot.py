@@ -27,7 +27,7 @@ logging.basicConfig(level=logging.INFO)
 # The commented out line shows an alternative using Streamlit secrets, which is useful for deployment scenarios.
 client = groq.Groq(
     api_key=os.environ.get("GROQ_API_KEY"),
-    #api_key=st.secrets["GROQ_API_KEY"],
+    #api_key=st.secrets["GROQ_API_KEY"], # GROQ_API_KEY = ""
 )
 
 # I have loaded a pre-trained sentence transformer model for generating text embeddings.
