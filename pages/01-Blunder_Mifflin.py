@@ -1,11 +1,11 @@
 import streamlit as st
 
 config = {'scrollZoom': True, 'displayModeBar': True, 'displaylogo': False}
-st.set_page_config(page_title="Blunder Mifflin", page_icon=":soccer:", layout="wide", initial_sidebar_state="expanded", menu_items=None)
+st.set_page_config(page_title="Blunder Mifflin", page_icon=":chat-plus-outline:", layout="wide", initial_sidebar_state="expanded", menu_items=None)
 st.write("""
 ### Sample Documents for RAGify
 
-To showcase how RAGify works with LLM on custom documents, I created the Employee Handbook for a fictional company called Blunder Mifflin.
+To showcase how RAGify works with Generative AI on custom documents, I created the Employee Handbook for a fictional company called Blunder Mifflin.
 
 The chatbot answers questions related to the company policy.\n
 
