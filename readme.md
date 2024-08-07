@@ -76,16 +76,16 @@ here is a simple overview of the diagram:
 ## What is covered in this repository?
 
 1. [RAGify - Turn Your Documents into an Interactive AI Assistant](#ragify---turn-your-documents-into-an-interactive-ai-assistant)
-	1. [Why RAGify?](#why-ragify)
-	2. [Customize RAGify for Your Needs](#customize-ragify-for-your-needs)
-	3. [How RAGify Works?](#how-ragify-works)
-	4. [What is covered in this repository?](#what-is-covered-in-this-repository)
-	5. [Key Components of RAGify](#key-components-of-ragify)
-	6. [Simple Explanations for Complex Terms](#simple-explanations-for-complex-terms)
-	7. [Input Documents - Blunder Mifflin](#input-documents---blunder-mifflin)
-	8. [RAG with your own documents](#rag-with-your-own-documents)
-	9. [Technical Deepdive into RAGify](#technical-deepdive-into-ragify)
-	10. [Acknowledgements](#acknowledgements)
+   1. [Why RAGify?](#why-ragify)
+   2. [Customize RAGify for Your Needs](#customize-ragify-for-your-needs)
+   3. [How RAGify Works?](#how-ragify-works)
+   4. [What is covered in this repository?](#what-is-covered-in-this-repository)
+   5. [Key Components of RAGify](#key-components-of-ragify)
+   6. [Simple Explanations for Complex Terms](#simple-explanations-for-complex-terms)
+   7. [Input Documents - Blunder Mifflin](#input-documents---blunder-mifflin)
+   8. [RAG with your own documents](#rag-with-your-own-documents)
+   9. [Technical Deepdive into RAGify](#technical-deepdive-into-ragify)
+   10. [Acknowledgements](#acknowledgements)
 
 ## Key Components of RAGify
 
@@ -890,6 +890,28 @@ def main():
                 st.json(usage_info)
         else:
             st.warning("Please enter a question.")
+```
+
+### Visualize RAG system (with Streamlit)
+
+This diagram demonstrates how the end-user flow looks like.
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant S as Streamlit UI
+    participant R as RAG System
+    participant F as FAISS Index
+    participant G as Gemini LLM
+
+    U->>S: Enter Query
+    S->>R: Process Query
+    R->>F: Retrieve Relevant Chunks
+    F-->>R: Return Chunks
+    R->>G: Generate Answer
+    G-->>R: Return Answer
+    R->>S: Display Results
+    S->>U: Show Answer and Sources
 ```
 
 ## Acknowledgements
