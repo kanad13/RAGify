@@ -27,8 +27,12 @@ RAGify offers a simple, secure way to bring your static documents to life using 
 ## Customize RAGify for Your Needs
 
 This Github repository provides detailed documentation on how RAGify works.
+
 With this information, you can quickly adapt RAGify to suit your needs.
+
 By making a few changes, RAGify can work with your own documentation.
+
+Scroll below to see how you can build a similar system.
 
 ## How RAGify Works?
 
@@ -63,7 +67,7 @@ graph TD
     G --> H
 ```
 
-here is a simple overview of the diagram:
+Here is a simple overview of the diagram above:
 
 1. The user asks a question.
 2. The RAG system converts this question into a numerical format (vector) that computers can understand and compare easily.
