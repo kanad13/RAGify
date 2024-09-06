@@ -18,6 +18,7 @@ steps:
         "--region",
         "us-central1",
         "--allow-unauthenticated",
+        "GROQ_API_KEY=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",
       ]
 
 images:
