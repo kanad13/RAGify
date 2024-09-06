@@ -23,3 +23,8 @@ steps:
 
 images:
   - "gcr.io/$PROJECT_ID/RAGify"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+serviceAccount: "projects/${PROJECT_ID}/serviceAccounts/651605804569-compute@developer.gserviceaccount.com"
