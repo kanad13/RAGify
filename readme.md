@@ -194,36 +194,33 @@ Before diving into the details of building RAGify, here is a high-level overview
 flowchart TD
     A[Start] --> B[Load Environment Variables]
     B --> C[Initialize Groq Client]
-    C --> D[Load PDFs]
-    D --> E[Extract Text]
-    E --> F[Create Chunks]
-    F --> G[Generate Embeddings]
-    G --> H{Dataset Size}
-    H -- Small --> I[Create FlatL2 Index]
-    H -- Large --> J[Create IVFFlat Index]
-    I --> K[FAISS Index]
-    J --> K
-    L[User Query] --> M[Encode Query]
-    M --> N{Check Cache}
-    N -- Hit --> O[Return Cached Response]
-    N -- Miss --> P[Search Index]
-    K --> P
-    P --> Q[Retrieve Relevant Chunks]
-    Q --> R[Generate LLM Response]
-    R --> S{API Error?}
-    S -- Yes --> T[Retry or Use Fallback Model]
-    T --> R
-    S -- No --> U[Update Cache]
-    U --> V[Display Results]
-    O --> V
-
+    C --> D[Load Sentence Transformer Model]
+    D --> E[Process PDFs]
+    E --> F[Extract Text]
+    F --> G[Create Chunks]
+    G --> H[Generate Embeddings]
+    H --> I{Dataset Size}
+    I -- Small --> J[Create FlatL2 Index]
+    I -- Large --> K[Create IVFFlat Index]
+    J --> L[FAISS Index]
+    K --> L
+    M[User Query] --> N[Retrieve Relevant Chunks]
+    L --> N
+    N --> O[Check Cache]
+    O -- Hit --> P[Return Cached Response]
+    O -- Miss --> Q[Generate LLM Response]
+    Q --> R{API Error?}
+    R -- Yes --> S[Retry or Use Fallback Model]
+    S --> Q
+    R -- No --> T[Update Cache]
+    T --> U[Display Results]
+    P --> U
     subgraph "Initialization"
         B
         C
-    end
-
-    subgraph "Data Processing and Indexing"
         D
+    end
+    subgraph "Data Processing & Indexing"
         E
         F
         G
@@ -231,10 +228,9 @@ flowchart TD
         I
         J
         K
-    end
-
-    subgraph "Query Processing and Response Generation"
         L
+    end
+    subgraph "Query Processing and Response Generation"
         M
         N
         O
@@ -243,73 +239,56 @@ flowchart TD
         R
         S
         T
-        U
     end
-
     subgraph "User Interface"
-        V
+        U
     end
 ```
 
 ### Visualize Caching aspect of RAGify
 
-This diagram shows the flow of my RAG system:
-
-1. **Text Extraction** - PDF files are processed by PyPdf to extract raw text.
-2. **Semantic Segmentation** - LangChain breaks down the extracted text into meaningful chunks.
-3. **Vectorization** - SentenceTransformer converts text chunks into numerical embeddings.
-4. **Similarity Search Index Creation** - FAISS organizes these embeddings for efficient retrieval.
-5. **Caching for Performance** - Similar queries and responses are cached to improve response time.
-6. **Persistent Storage** - The FAISS index is saved to disk for future use.
-
 When a query is received, the system uses this prepared index to quickly retrieve relevant information, which is then used to augment the LLM's response. The next section will cover the LLM part.
 
 ```mermaid
 sequenceDiagram
-participant PDF as PDF Files
-participant PyPdf as PyPdf
-participant LangChain as LangChain
-participant SentenceTransformer as SentenceTransformer
-participant FAISS as FAISS
-participant Cache as Cache
-participant Disk as Disk Storage
+    participant User
+    participant Streamlit as Streamlit UI
+    participant PDF as PDF Files
+    participant PyPDF as PyPDF
+    participant TextSplitter as RecursiveCharacterTextSplitter
+    participant SentenceTransformer as SentenceTransformer
+    participant FAISS as FAISS
+    participant Cache as Semantic Cache
+    participant Groq as Groq API
+    participant Disk as Disk Storage
 
-PDF->>PyPdf: Input
-PyPdf->>LangChain: Extracted Text
-LangChain->>SentenceTransformer: Text Chunks
-SentenceTransformer->>FAISS: Embeddings
-FAISS->>Cache: Cached Embeddings
-Cache->>FAISS: Retrieve Relevant Chunks
-FAISS->>Disk: Vector Index
+    User->>Streamlit: Input Query
+    Streamlit->>PDF: Read Files
+    PDF->>PyPDF: Input
+    PyPDF->>TextSplitter: Extracted Text
+    TextSplitter->>SentenceTransformer: Text Chunks
+    SentenceTransformer->>FAISS: Embeddings
+    FAISS->>Disk: Store Vector Index
+    Streamlit->>SentenceTransformer: Encode Query
+    SentenceTransformer->>FAISS: Query Vector
+    FAISS->>Cache: Check Cache
+    alt Cache Hit
+        Cache->>Streamlit: Cached Response
+    else Cache Miss
+        FAISS->>FAISS: Retrieve Relevant Chunks
+        FAISS->>Groq: Context + Query
+        Groq->>Cache: Store Response
+        Groq->>Streamlit: Generated Response
+    end
+    Streamlit->>User: Display Results
 
-Note over PDF,PyPdf: Text Extraction
-Note over PyPdf,LangChain: Semantic Segmentation
-Note over LangChain,SentenceTransformer: Vectorization
-Note over SentenceTransformer,FAISS: Similarity Search Index Creation
-Note over FAISS,Cache: Caching for Performance
-Note over FAISS,Disk: Persistent Storage
-```
-
-### Visualize user engagement of RAGify
-
-This diagram demonstrates how the end-user flow looks like.
-
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant S as Streamlit UI
-    participant R as RAG System
-    participant F as FAISS Index
-    participant G as Gemini LLM
-
-    U->>S: Enter Query
-    S->>R: Process Query
-    R->>F: Retrieve Relevant Chunks
-    F-->>R: Return Chunks
-    R->>G: Generate Answer
-    G-->>R: Return Answer
-    R->>S: Display Results
-    S->>U: Show Answer and Sources
+    Note over PDF,PyPDF: Text Extraction
+    Note over PyPDF,TextSplitter: Text Chunking
+    Note over TextSplitter,SentenceTransformer: Vectorization
+    Note over SentenceTransformer,FAISS: Similarity Search Index Creation
+    Note over FAISS,Cache: Semantic Caching
+    Note over FAISS,Disk: Persistent Storage
+    Note over Groq,Streamlit: LLM Response Generation
 ```
 
 ## Simple Explanations for Complex Terms
