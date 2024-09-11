@@ -267,11 +267,9 @@ st.set_page_config(page_title="Blunder Mifflin", page_icon=":chat-plus-outline:"
 
 def main():
     st.write("Ask questions about Blunder Mifflin's Company Policy.")
-
     # I have processed PDFs and created the index at the start to ensure up-to-date information.
     all_chunks, chunk_to_doc, current_hash = process_pdfs()
     index = create_faiss_index(all_chunks)
-
     # I have provided default questions to guide users and demonstrate system capabilities.
     default_questions = [
         "Select a question",
@@ -281,20 +279,16 @@ def main():
         "Describe Blunder Mifflin's Birthday Party Committee Rules",
         "Other (Type your own question)"
     ]
-
     # I have used a dropdown for ease of use, but also allowed custom questions for flexibility.
     selected_question = st.selectbox("Choose a question or select 'Other' to type your own:", default_questions)
-
     if selected_question == "Other (Type your own question)":
         user_query = st.text_input("Enter your question:")
     elif selected_question != "Select a question":
         user_query = selected_question
     else:
         user_query = ""
-
     if user_query:
         pass
-
     # I have used a button to trigger the query process, giving users control over when to send a request.
     if st.button("Get Answer"):
         if user_query and user_query != "Select a question":
@@ -303,24 +297,23 @@ def main():
                 all_chunks, chunk_to_doc, _ = process_pdfs(current_hash)
                 index = create_faiss_index(all_chunks)
                 response, usage_info, source_docs = rag_query(user_query, index, all_chunks, chunk_to_doc)
-
             # I have displayed the response, sources, and usage info for transparency.
             st.subheader("Answer:")
             st.write(response)
-
             st.subheader("Source Documents:")
             for doc_name, chunks in source_docs.items():
                 with st.expander(f"Text used from {doc_name}"):
                     for chunk in chunks:
                         st.markdown(chunk)
 
-            with st.expander("Usage Information"):
-                st.json({
-                    "Prompt Tokens": usage_info["prompt_tokens"],
-                    "Completion Tokens": usage_info["completion_tokens"],
-                    "Total Tokens": usage_info["total_tokens"],
-                    "Model Used": usage_info["model_used"]
-                })
+            # Track tokens used by each query
+            st.subheader("Track LLM Usage")
+            st.json({
+                "Prompt Tokens": usage_info["prompt_tokens"],
+                "Completion Tokens": usage_info["completion_tokens"],
+                "Total Tokens": usage_info["total_tokens"],
+                "Model Used": usage_info["model_used"]
+            })
         else:
             st.warning("Please select a question or enter your own.")
 

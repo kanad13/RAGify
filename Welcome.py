@@ -4,26 +4,23 @@ config = {'scrollZoom': True, 'displayModeBar': True, 'displaylogo': False}
 st.set_page_config(page_title="RAGify", page_icon=":chat-plus-outline:", layout="wide", initial_sidebar_state="expanded", menu_items=None)
 
 st.write("""
-#### RAGify - Bringing Your Documentation to Life with Generative AI
+#### RAGify - Chat with Your Documents using Gen AI
 
-This chatbot is for RAGify - a tool that shows you how to transform your internal company documents into an interactive Q&A system.\n
+This chatbot is for RAGify - a tool that lets you chat with your documents using Generative AI & Retrieval-Augmented Generation (RAG).
 
-It uses two key technologies:
-
-1. Retrieval-Augmented Generation (RAG)
-2. Large Language Models (LLMs)
+Think of RAGify as giving your documents a brain.
 
 #### Why RAGify?
 
-Every company has a vast amount of documentation spread across various file formats like PDF and DOCX.\n
-Would it not be great if you could chat with these documents?
+Individuals and companies often accumulate vast amounts of documentation in various formats like PDF and DOCX.\n
+Finding relevant information means sifting through multiple documents to locate concrete answers. Imagine being able to chat with these documents.\n
 
 If you use ChatGPT or Gemini to upload your documents to chat with them, then that risks making your company's confidential information public.
 
-RAGify provides an alternative by showing you how to:
+RAGify offers a secure mechanism to:
 - Build a secure system that works with your internal documents
 - Integrate with trusted external entities
-- Maintain the confidentiality of your corporate data
+- Maintain the confidentiality of your data
 
 RAGify offers a simple, secure way to bring your static documents to life using the power of Generative AI.
 

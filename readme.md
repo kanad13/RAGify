@@ -8,7 +8,8 @@ Think of RAGify as giving your documents a brain.
 
 ## Why RAGify?
 
-Individuals and companies often accumulate vast amounts of documentation in various formats like PDF and DOCX. Finding relevant information means sifting through multiple documents to locate concrete answers. Imagine being able to chat with these documents.
+Individuals and companies often accumulate vast amounts of documentation in various formats like PDF and DOCX.
+Finding relevant information means sifting through multiple documents to locate concrete answers. Imagine being able to chat with these documents.
 
 RAGify offers a secure mechanism to:
 
