@@ -1,38 +1,22 @@
-# RAGify - Turn Your Documents into an Interactive AI Assistant
+# RAGify - Chat with Your Documents using Gen AI
 
-Ever wanted to chat with your company's documents? RAGify makes it possible.
+This github repository is for RAGify - a tool that lets you chat with your documents using Generative AI & Retrieval-Augmented Generation (RAG).
 
-This github repository is for RAGify - a tool that transforms your internal documents into an interactive Q&A system. It uses two key technologies:
-
-1. Retrieval-Augmented Generation (RAG)
-2. Large Language Models (LLMs)
-
-Think of RAGify as giving your PDFs a brain, without compromising your confidential data.
+Think of RAGify as giving your documents a brain.
 
 [Click here to see RAGify in action on some sample documents.](https://ragify.streamlit.app)
 
 ## Why RAGify?
 
-Every company has a vast amount of documentation spread across various file formats like PDF and DOCX. Wouldn't it be great if you could chat with these documents?
-If you use ChatGPT or Gemini to upload yourn documents to chat with them, then that risks making your company's confidential information public.
+Individuals and companies often accumulate vast amounts of documentation in various formats like PDF and DOCX. Finding relevant information means sifting through multiple documents to locate concrete answers. Imagine being able to chat with these documents.
 
-RAGify provides an alternative by showing you how to:
+RAGify offers a secure mechanism to:
 
-- Build a secure system that works with your internal documents
-- Integrate with trusted external entities
-- Maintain the confidentiality of your corporate data
+    - Build a private system that works with your documents
+    - Integrate with trusted external sources
+    - Maintain the confidentiality of your data
 
-RAGify offers a simple, secure way to bring your static documents to life using the power of Generative AI.
-
-## Customize RAGify for Your Needs
-
-This Github repository provides detailed documentation on how RAGify works.
-
-With this information, you can quickly adapt RAGify to suit your needs.
-
-By making a few changes, RAGify can work with your own documentation.
-
-Scroll below to see how you can build a similar system.
+RAGify provides a simple, secure way to bring your static documents to life using the power of Generative AI.
 
 ## How RAGify Works?
 
@@ -79,25 +63,24 @@ Here is a simple overview of the diagram above:
 
 ## What is covered in this repository?
 
-1. [RAGify - Turn Your Documents into an Interactive AI Assistant](#ragify---turn-your-documents-into-an-interactive-ai-assistant)
+1. [RAGify - Chat with Your Documents using Gen AI](#ragify---chat-with-your-documents-using-gen-ai)
    1. [Why RAGify?](#why-ragify)
-   2. [Customize RAGify for Your Needs](#customize-ragify-for-your-needs)
-   3. [How RAGify Works?](#how-ragify-works)
-   4. [What is covered in this repository?](#what-is-covered-in-this-repository)
-   5. [Key Components of RAGify](#key-components-of-ragify)
-   6. [Input Documents - Blunder Mifflin](#input-documents---blunder-mifflin)
-   7. [Uniqueness of RAGify Architecture](#uniqueness-of-ragify-architecture)
-   8. [RAGify Technical Deepdive](#ragify-technical-deepdive)
-   9. [Simple Explanations for Complex Terms](#simple-explanations-for-complex-terms)
-   10. [RAG with your own documents](#rag-with-your-own-documents)
-   11. [Acknowledgements](#acknowledgements)
+   2. [How RAGify Works?](#how-ragify-works)
+   3. [What is covered in this repository?](#what-is-covered-in-this-repository)
+   4. [Key Components of RAGify](#key-components-of-ragify)
+   5. [Input Documents - Blunder Mifflin](#input-documents---blunder-mifflin)
+   6. [Uniqueness of RAGify Architecture](#uniqueness-of-ragify-architecture)
+   7. [RAGify Technical Deepdive](#ragify-technical-deepdive)
+   8. [Simple Explanations for Complex Terms](#simple-explanations-for-complex-terms)
+   9. [RAG with your own documents](#rag-with-your-own-documents)
+   10. [Acknowledgements](#acknowledgements)
 
 ## Key Components of RAGify
 
 - **Large Language Model (LLM) to generate context-aware responses.**
   - My project uses Groq's API to interact with the large language model, specifically 8B model from the [Meta Llama 3.1 collection](https://github.com/meta-llama/llama-models/blob/main/models/llama3_1/MODEL_CARD.md).
   - This model is served by [Groq Cloud](https://wow.groq.com/why-groq/) and is responsible for producing intelligent and contextually relevant responses based on the retrieved chunks of text from the input documents.
-  - The code can be easily customized to use other models like `OpenAI`, `Mistral`, or `Gemini`.
+  - The code can be easily customized to use other models like `OpenAI`, `Mistral`, or `Gemini` or even use a local LLM.
 - **Sentence Transformers to generate embeddings for text chunks and queries.**
   - The `SentenceTransformer` model [all-mpnet-base-v2](https://huggingface.co/sentence-transformers/all-mpnet-base-v2) is used to create dense vector embeddings from the text data extracted from PDFs.
   - These embeddings are crucial for semantic search, allowing the system to find the most relevant text chunks corresponding to a user's query.
