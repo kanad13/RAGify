@@ -252,13 +252,18 @@ def rag_query(query: str, index, all_chunks, chunk_to_doc, top_k: int = 10) -> t
     response, usage_info, used_chunks = generate_response(query, relevant_chunks)
 
     # I have tracked source documents for transparency and citation.
-    source_docs = list(set([chunk_to_doc.get(chunk, "Unknown Source") for chunk in used_chunks]))
+    source_docs = {}
+    for chunk in used_chunks:
+        doc_name = chunk_to_doc.get(chunk, "Unknown Source")
+        if doc_name not in source_docs:
+            source_docs[doc_name] = []
+        source_docs[doc_name].append(chunk)
 
     return response, usage_info, source_docs
 
 # I have configured the Streamlit app.
 # I have used Streamlit for rapid prototyping and easy deployment of the user interface.
-st.set_page_config(page_title="Blunder Mifflin", page_icon=":soccer:", layout="wide", initial_sidebar_state="expanded", menu_items=None)
+st.set_page_config(page_title="Blunder Mifflin", page_icon=":chat-plus-outline:", layout="wide", initial_sidebar_state="expanded", menu_items=None)
 
 def main():
     st.write("Ask questions about Blunder Mifflin's Company Policy.")
@@ -304,8 +309,10 @@ def main():
             st.write(response)
 
             st.subheader("Source Documents:")
-            for doc in source_docs:
-                st.write(f"- {doc}")
+            for doc_name, chunks in source_docs.items():
+                with st.expander(f"Text used from {doc_name}"):
+                    for chunk in chunks:
+                        st.markdown(chunk)
 
             with st.expander("Usage Information"):
                 st.json({
