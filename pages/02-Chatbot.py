@@ -13,6 +13,7 @@ import streamlit as st
 import hashlib
 import time
 from groq import RateLimitError
+import pickle
 
 # I have loaded environment variables to keep sensitive information out of the codebase.
 # This is crucial for security and allows for easy configuration changes across environments.
@@ -100,9 +101,26 @@ def process_pdfs(_hash=None):
     return all_chunks, chunk_to_doc, current_hash
 
 @st.cache_resource
-def create_faiss_index(all_chunks):
+def create_faiss_index(all_chunks, force_rebuild=False):
     # I have used FAISS for efficient similarity search.
     # This is crucial for quickly finding relevant chunks when answering queries.
+
+    # Before creating a new index, let me see if any index file already exists. If it does, then
+    # Saving and loading the FAISS index from a file will allow the index to persist between sessions and hopefully speed up startup times for subsequent runs.
+    # I am yet to test this thoroughly. It may or may not work.
+    # The code will first check if a FAISS index file already exists.
+    # If it exists and force_rebuild (from main function) is False, it loads the existing index.
+    # If the file doesn't exist or force_rebuild is True, it creates a new index.
+    # After creating a new index, it saves it to a file using pickle.
+    index_file = 'faiss_index.pkl'
+    if os.path.exists(index_file) and not force_rebuild:
+        # Load existing index
+        with open(index_file, 'rb') as f:
+            index = pickle.load(f)
+        print("Loaded existing FAISS index.")
+        return index
+
+    # Code below creates a new index assuming the above code did not reuse an existing one
     embeddings = model.encode(all_chunks)
     dimension = embeddings.shape[1]
     num_chunks = len(all_chunks)
@@ -114,12 +132,18 @@ def create_faiss_index(all_chunks):
         index = faiss.IndexFlatL2(dimension)
     else:
         logging.info("Using IVFFlat index")
-        n_clusters = min(int(np.sqrt(num_chunks)), 100)  # Balancing clustering and search efficiency
+        n_clusters = min(int(np.sqrt(num_chunks)), 100) # Balancing clustering and search efficiency
         quantizer = faiss.IndexFlatL2(dimension)
         index = faiss.IndexIVFFlat(quantizer, dimension, n_clusters)
         index.train(embeddings.astype('float32'))
 
     index.add(embeddings.astype('float32'))
+
+    # Save index to file
+    with open(index_file, 'wb') as f:
+        pickle.dump(index, f)
+    print("Created and saved new FAISS index.")
+
     return index
 
 # I have initialized a cache for storing query results.
@@ -269,7 +293,7 @@ def main():
     st.write("Ask questions about Blunder Mifflin's Company Policy.")
     # I have processed PDFs and created the index at the start to ensure up-to-date information.
     all_chunks, chunk_to_doc, current_hash = process_pdfs()
-    index = create_faiss_index(all_chunks)
+    index = create_faiss_index(all_chunks, force_rebuild=False) # rebuild the index when the source documents change by setting force_rebuild=True
     # I have provided default questions to guide users and demonstrate system capabilities.
     default_questions = [
         "Select a question",

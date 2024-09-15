@@ -587,3 +587,4 @@ rag_venv/
 .env
 semantic_cache.json
 blunder_mifflin_index.faiss
+faiss_index.pkl

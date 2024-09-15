@@ -12,17 +12,16 @@ Think of RAGify as giving your documents a brain.
 
 #### Why RAGify?
 
-Individuals and companies often accumulate vast amounts of documentation in various formats like PDF and DOCX.\n
-Finding relevant information means sifting through multiple documents to locate concrete answers. Imagine being able to chat with these documents.\n
+People and businesses often collect many documents in formats like PDF and DOCX.\n
+To find specific information, they have to search through all these documents. Imagine if you could just chat with these documents to get the answers you need easily.\n
 
-If you use ChatGPT or Gemini to upload your documents to chat with them, then that risks making your company's confidential information public.
+RAGify provides a secure way to:
 
-RAGify offers a secure mechanism to:
-- Build a secure system that works with your internal documents
-- Integrate with trusted external entities
-- Maintain the confidentiality of your data
+- Create a private system for your documents
+- Connect with trusted external sources
+- Keep your data confidential
 
-RAGify offers a simple, secure way to bring your static documents to life using the power of Generative AI.
+RAGify offers an easy and secure method to make your documents **interactive** using Generative AI.
 
 #### Navigation
 
