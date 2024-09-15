@@ -8,73 +8,37 @@ Think of RAGify as giving your documents a brain.
 
 ## Why RAGify?
 
-Individuals and companies often accumulate vast amounts of documentation in various formats like PDF and DOCX.
-Finding relevant information means sifting through multiple documents to locate concrete answers. Imagine being able to chat with these documents.
+People and businesses often collect many documents in formats like PDF and DOCX.
 
-RAGify offers a secure mechanism to:
+To find specific information, they have to search through all these documents. Imagine if you could just chat with these documents to get the answers you need easily.
 
-    - Build a private system that works with your documents
-    - Integrate with trusted external sources
-    - Maintain the confidentiality of your data
+RAGify provides a secure way to:
 
-RAGify provides a simple, secure way to bring your static documents to life using the power of Generative AI.
+- Create a private system for your documents
+- Connect with trusted external sources
+- Keep your data confidential
+
+It offers an easy and secure method to make your documents **interactive** using Generative AI.
 
 ## How RAGify Works?
 
 ```mermaid
-graph TD
-    subgraph User
-    A[Input Query]
-    H[Get Answer]
+graph LR
+    A[Question from User] --> B[Chatbot Frontend]
+    D[Input Documents] --> E[Text Embeddings]
+    subgraph RAGify
+        B --> F[Retrieve Relevant Text]
+        E --> F
+        F --> G[Generative AI]
     end
-    subgraph Knowledge Base
-    I[Document Storage]
-    J[Vector Embeddings]
-    end
-    subgraph RAG System
-    B[Embed Query]
-    C[Vector Search]
-    D[Retrieve Relevant Texts]
-    E[Create Prompt]
-    end
-    subgraph LLM
-    F[Process Prompt]
-    G[Generate Response]
-    end
-    A --> B
-    I --> J
-    J --> C
-    B --> C
-    C --> D
-    D --> E
-    E --> F
-    F --> G
-    G --> H
+    G --> H[Answer to User]
 ```
 
-Here is a simple overview of the diagram above:
-
-1. The user asks a question.
-2. The RAG system converts this question into a numerical format (vector) that computers can understand and compare easily.
-3. It then searches through a database of pre-converted document vectors to find the most relevant information.
-4. The system retrieves the actual text of these relevant documents.
-5. It combines the user's question with this relevant information to create a detailed prompt.
-6. This prompt is sent to an AI (the LLM), which processes it and generates a response.
-7. Finally, the user receives this response as their answer.
-
-## What is covered in this repository?
-
-1. [RAGify - Chat with Your Documents using Gen AI](#ragify---chat-with-your-documents-using-gen-ai)
-   1. [Why RAGify?](#why-ragify)
-   2. [How RAGify Works?](#how-ragify-works)
-   3. [What is covered in this repository?](#what-is-covered-in-this-repository)
-   4. [Key Components of RAGify](#key-components-of-ragify)
-   5. [Input Documents - Blunder Mifflin](#input-documents---blunder-mifflin)
-   6. [Uniqueness of RAGify Architecture](#uniqueness-of-ragify-architecture)
-   7. [RAGify Technical Deepdive](#ragify-technical-deepdive)
-   8. [Simple Explanations for Complex Terms](#simple-explanations-for-complex-terms)
-   9. [RAG with your own documents](#rag-with-your-own-documents)
-   10. [Acknowledgements](#acknowledgements)
+- **Chatbot Frontend** - Streamlit frontend for interacting with the chatbot.
+- **Input Documents** - Source documents for querying information e.g. NewsLetters, Company Policies, etc.
+- **Text Embeddings** - SentenceTransformer and FAISS convert text into embeddings for similarity search.
+- **Retrieve Relevant Answers** - Retrieve relevant chunks from the input documents.
+- **Generative AI** - Use a language model to generate natural language responses.
 
 ## Key Components of RAGify
 
@@ -108,7 +72,7 @@ Now that I have explained some complex terms about Retrieval-Augmented Generatio
 
 To showcase how RAGify works with LLM on custom documents, I created the Employee Handbook for a fictional company called Blunder Mifflin.
 
-The chatbot answers questions related to the company policy.\n
+The chatbot answers questions related to the company policy.
 
 So for example, if an employee of Blunder Mifflin wants to know what is the "Work from Home" policy, then they can just ask the chatbot that question and get the answer using the power of Generative AI.
 
@@ -169,6 +133,49 @@ This code will show how you can use RAG to handle your own company's documents.
     - Link to [relevant documentation](#ragify-technical-deepdive).
 
 ## RAGify Technical Deepdive
+
+## RAGify workflow
+
+```mermaid
+graph TD
+    subgraph User
+    A[Input Query]
+    H[Get Answer]
+    end
+    subgraph Knowledge Base
+    I[Document Storage]
+    J[Vector Embeddings]
+    end
+    subgraph RAG System
+    B[Embed Query]
+    C[Vector Search]
+    D[Retrieve Relevant Texts]
+    E[Create Prompt]
+    end
+    subgraph LLM
+    F[Process Prompt]
+    G[Generate Response]
+    end
+    A --> B
+    I --> J
+    J --> C
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+```
+
+Here is a simple overview of the diagram above:
+
+1. The user asks a question.
+2. The RAG system converts this question into a numerical format (vector) that computers can understand and compare easily.
+3. It then searches through a database of pre-converted document vectors to find the most relevant information.
+4. The system retrieves the actual text of these relevant documents.
+5. It combines the user's question with this relevant information to create a detailed prompt.
+6. This prompt is sent to an AI (the LLM), which processes it and generates a response.
+7. Finally, the user receives this response as their answer.
 
 ### Full RAGify architecture
 
