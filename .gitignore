@@ -588,3 +588,4 @@ rag_venv/
 semantic_cache.json
 blunder_mifflin_index.faiss
 faiss_index.pkl
+# source rag_venv/bin/activate
