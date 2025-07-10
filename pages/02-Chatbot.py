@@ -1,7 +1,6 @@
 import os
-import groq
+import openai
 from typing import List
-from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
 from pypdf import PdfReader
@@ -12,7 +11,6 @@ from dotenv import load_dotenv
 import streamlit as st
 import hashlib
 import time
-from groq import RateLimitError
 import pickle
 
 # I have loaded environment variables to keep sensitive information out of the codebase.
@@ -23,19 +21,31 @@ load_dotenv()
 # Proper logging is essential for monitoring and troubleshooting in production environments.
 logging.basicConfig(level=logging.INFO)
 
-# I have initialized the Groq client for API access.
+# I have initialized the OpenAI client for API access.
 # Here, I'm using an API key stored in environment variables for security.
 # The commented out line shows an alternative using Streamlit secrets, which is useful for deployment scenarios.
-client = groq.Groq(
-    api_key=os.environ.get("GROQ_API_KEY"),
-    #api_key=st.secrets["GROQ_API_KEY"], # GROQ_API_KEY = ""
+client = openai.OpenAI(
+    api_key=os.environ.get("OPENAI_API_KEY"),
+    #api_key=st.secrets["OPENAI_API_KEY"], # OPENAI_API_KEY = ""
 )
 
-# I have loaded a pre-trained sentence transformer model for generating text embeddings.
-# I chose 'all-mpnet-base-v2' for its balance of performance and accuracy.
+# I have configured OpenAI's text embedding model for generating text embeddings.
+# I chose 'text-embedding-3-small' for its balance of performance and accuracy.
 # This model is crucial for converting text to vector representations for similarity search.
-model_name = 'all-mpnet-base-v2'
-model = SentenceTransformer(model_name)
+embedding_model_name = 'text-embedding-3-small'
+llm_model_name = 'gpt-4.1-nano-2025-04-14'
+
+def get_embeddings(texts):
+    # I have created a function to get embeddings from OpenAI API.
+    # This handles both single texts and batches efficiently.
+    if isinstance(texts, str):
+        texts = [texts]
+    
+    response = client.embeddings.create(
+        model=embedding_model_name,
+        input=texts
+    )
+    return [embedding.embedding for embedding in response.data]
 
 def extract_text_from_pdf(pdf_path):
     # I have extracted text from PDFs to make the content searchable.
@@ -121,7 +131,7 @@ def create_faiss_index(all_chunks, force_rebuild=False):
         return index
 
     # Code below creates a new index assuming the above code did not reuse an existing one
-    embeddings = model.encode(all_chunks)
+    embeddings = np.array(get_embeddings(all_chunks))
     dimension = embeddings.shape[1]
     num_chunks = len(all_chunks)
 
@@ -157,12 +167,12 @@ def load_cache():
         with open(cache_file, 'r') as f:
             cache = json.load(f)
             # I have reset the cache if the embedding model changes to ensure consistency.
-            if cache.get('model_name') != model_name:
+            if cache.get('model_name') != embedding_model_name:
                 logging.info("Embedding model changed. Resetting cache.")
-                return {"queries": [], "embeddings": [], "responses": [], "model_name": model_name}
+                return {"queries": [], "embeddings": [], "responses": [], "model_name": embedding_model_name}
             return cache
     except FileNotFoundError:
-        return {"queries": [], "embeddings": [], "responses": [], "model_name": model_name}
+        return {"queries": [], "embeddings": [], "responses": [], "model_name": embedding_model_name}
 
 def save_cache(cache):
     # I have regularly saved the cache to ensure we don't lose valuable precomputed results.
@@ -188,13 +198,13 @@ def update_cache(query, query_embedding, response):
     cache['queries'].append(query)
     cache['embeddings'].append(query_embedding.tolist())
     cache['responses'].append(response)
-    cache['model_name'] = model_name
+    cache['model_name'] = embedding_model_name
     save_cache(cache)
 
 def retrieve_relevant_chunks(query, index, all_chunks, top_k=10):
     # I have used vector similarity to find the most relevant chunks.
     # This is more effective than keyword matching for understanding context and semantics.
-    query_vector = model.encode([query])[0]
+    query_vector = np.array(get_embeddings([query])[0])
 
     cached_response = retrieve_from_cache(query_vector)
     if cached_response:
@@ -209,7 +219,7 @@ def retrieve_relevant_chunks(query, index, all_chunks, top_k=10):
     update_cache(query, query_vector, relevant_chunks)
     return relevant_chunks
 
-def generate_response(query: str, relevant_chunks: List[str], primary_model: str = "llama-3.1-8b-instant", fallback_model: str = "gemma2-9b-it", max_retries: int = 3):
+def generate_response(query: str, relevant_chunks: List[str], primary_model: str = "gpt-4.1-nano-2025-04-14", fallback_model: str = "gpt-3.5-turbo", max_retries: int = 3):
     # I have used a language model to generate responses based on retrieved chunks.
     # This allows for more natural and contextually appropriate answers.
     context = "\n".join(relevant_chunks)
@@ -257,7 +267,7 @@ Answer:"""
                 logging.info(f"Usage Info: {usage_info}")
                 return response, usage_info, relevant_chunks
 
-            except RateLimitError as e:
+            except openai.RateLimitError as e:
                 if model == fallback_model and attempt == max_retries - 1:
                     logging.error(f"Rate limit exceeded for both models after {max_retries} attempts.")
                     raise e

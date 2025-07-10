@@ -1,8 +1,7 @@
 streamlit
-sentence-transformers
 pypdf
 langchain
 faiss-cpu
-groq
+openai
 python-dotenv
 IProgress
